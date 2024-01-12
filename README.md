@@ -4,6 +4,8 @@ Selection cuts for IBD analysis with Machine Learning (Neural Network, Boosted D
 
 Authors: Davide Basilico (davide.basilico@mi.infn.it), Gloria Senatore (gloria.senatore@mi.infn.it)
 
+Other information: https://docs.google.com/presentation/d/1hnqCs1f93pJPCweK5U3vMBuM5VKYMLdVKGHwifIv1-I/edit?usp=sharing
+
 -- How to launch:
 python3 IBD_Selection_ML.py --config CfgFile.cfg
 
