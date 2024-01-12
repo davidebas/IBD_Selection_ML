@@ -1,7 +1,8 @@
 # IBD_Selection_ML
 
 Selection cuts for IBD analysis with Machine Learning (Neural Network, Boosted Decision Trees) methods
-Davide Basilico (davide.basilico@mi.infn.it), Gloria Senatore (gloria.senatore@mi.infn.it)
+
+Authors: Davide Basilico (davide.basilico@mi.infn.it), Gloria Senatore (gloria.senatore@mi.infn.it)
 
 -- How to launch:
 python3 IBD_Selection_ML.py --config CfgFile.cfg
