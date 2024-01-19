@@ -4,7 +4,6 @@
 def main():
 
 	#### Import libraries
-
 	from lib import import_lib
 	from lib import read_settings
 
@@ -184,22 +183,11 @@ def main():
 	hist_loss = manager.hist_loss
 	hist_val_loss = manager.hist_val_loss
 	model = manager.model
+	mean_acc = manager.mean_acc
+	mean_val_acc = manager.mean_val_acc
+	mean_loss = manager.mean_loss
+	mean_val_loss = manager.mean_val_loss
 
-	mean_acc = np.mean(hist_acc[:training], axis=0)
-	mean_val_acc = np.mean(hist_val_acc[:training], axis=0)
-	mean_loss = np.mean(hist_loss[:training], axis=0)
-	mean_val_loss = np.mean(hist_val_loss[:training], axis=0)
-	
-	score_T = np.array(score).T
-	score_test_T = np.array(score_test).T
-	
-	# print performance
-	print('-- TRAINING RESULTS: ')
-	print('Mean validation loss:', float(sum(score_T[0]))/training)
-	print('Mean validation accuracy:', float(sum(score_T[1]))/training)
-	print('Mean test loss:', float(sum(score_test_T[0]))/training)
-	print('Mean test accuracy:', float(sum(score_test_T[1]))/training,'\n')
-		
 	# Plot history for loss and accuracy
 
 	from plots import plot_mean_model_history

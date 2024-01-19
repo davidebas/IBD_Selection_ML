@@ -21,6 +21,12 @@ class TrainingManager_NN:
 		self.hist_val_loss = []
 		self.label = []
 		self.model = None
+		self.mean_acc = None
+		self.mean_val_acc = None
+		self.mean_val_loss = None
+		self.mean_val_accuracy = None
+		self.mean_test_loss = None
+		self.mean_test_accuracy = None
 
 	def train_model(self, train, label_train, validation, label_validation, test, label_test):
 		print("-- TRAINING has started")
@@ -69,9 +75,29 @@ class TrainingManager_NN:
 			prediction = self.model.predict(test)
 			self.label.append(prediction.tolist())
 			
-			print("PRINT DI VARIE COSE")
-			print("Seed di NumPy:", np.random.get_state()[1][0])
+		self.compute_average_statistics()
 
+	def compute_average_statistics(self):
+		self.mean_acc = np.mean(self.hist_acc[:self.training], axis=0)
+		self.mean_val_acc = np.mean(self.hist_val_acc[:self.training], axis=0)
+		self.mean_loss = np.mean(self.hist_loss[:self.training], axis=0)
+		mean_val_loss = np.mean(self.hist_val_loss[:self.training], axis=0)
+
+		score_T = np.array(self.score).T
+		score_test_T = np.array(self.score_test).T
+
+		# Calcola statistiche medie
+		self.mean_val_loss = float(sum(score_T[0])) / self.training
+		self.mean_val_accuracy = float(sum(score_T[1])) / self.training
+		self.mean_test_loss = float(sum(score_test_T[0])) / self.training
+		self.mean_test_accuracy = float(sum(score_test_T[1])) / self.training
+
+		# Stampa performance medie
+		print('-- TRAINING RESULTS: ')
+		print('Mean validation loss:', self.mean_val_loss)
+		print('Mean validation accuracy:', self.mean_val_accuracy)
+		print('Mean test loss:', self.mean_test_loss)
+		print('Mean test accuracy:', self.mean_test_accuracy, '\n')
 
 	def build_model(self):
 		np.random.seed(10)
