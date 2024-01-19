@@ -23,7 +23,7 @@ def plot_mean_model_history(mean_acc, mean_val_acc, mean_loss, mean_val_loss, pa
     plt.savefig(path + "_MeanModelLoss_History.pdf")
     plt.close()
 
-def plot_roc_curve(training, tpr_list, fpr_list, mean_auc, dev_auc, mean_eff, dev_eff, mean_pur, dev_pur, ar, purity, tpr_cuts, fpr_cuts):
+def plot_roc_curve(training, path, tpr_list, fpr_list, mean_auc, dev_auc, mean_eff, dev_eff, mean_pur, dev_pur, ar, purity, tpr_cuts, fpr_cuts):
     import pandas as pd
     import seaborn as sns
     import matplotlib.pyplot as plt
@@ -52,6 +52,7 @@ def plot_roc_curve(training, tpr_list, fpr_list, mean_auc, dev_auc, mean_eff, de
     plt.ylabel('Signal purity (= 1 - false positive rate)')
     plt.title('ROC curve')
     plt.legend(loc='best')
+    plt.savefig("ROC_Curve.pdf")
     plt.grid()
     plt.show()
 

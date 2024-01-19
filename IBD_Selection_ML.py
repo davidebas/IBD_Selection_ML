@@ -59,6 +59,8 @@ def main():
 	
 	prompt_cut = [R_Threshold_Max, Ep_Threshold_Min, Ep_Threshold_Max, DeltaR_Max]
 	delayed_cut = [R_Threshold_Max, Ed_Threshold_Min_1, Ed_Threshold_Max_1, Ed_Threshold_Min_2, Ed_Threshold_Max_2]
+	eff_meta = []
+	pur_meta = []
 
 	df_sig = pd.read_csv(InputDataset_Sig, delimiter='	')
 	df_sig["rp3"] = df_sig["rp"]**3.
@@ -87,14 +89,22 @@ def main():
 	#### Resampling of distributions with gaussian KDEs
 
 	np.random.seed(10)
+	
+	print("NUMBER OF EVENTS FOR EACH DATASET DF_SIG AND DF_BKG")
+	print(len(df_sig))
+	print(len(df_bkg))
 
 	variables_to_use = ["rp3", "rd3", "ep", "ed", "deltar"]
-	projection_values_variables_to_use = ["10000", "10000", "3", "2.2", "4"]
+	projection_values_variables_to_use = [1000, 1000, 5, 2.2, 1.5]
+	minimum_variables = [0, 0, Ep_Threshold_Min, Ed_Threshold_Min_1, 0]
+	maximum_variables = [R_Threshold_Max**3, R_Threshold_Max**3, Ep_Threshold_Max, Ed_Threshold_Max_1, 4]
 
 	if variables == 7:
 	    variables_to_use.extend(["QLpFlat", "QLdFlat"])
-	    projection_values_variables_to_use.extend(["20000","20000"])
-
+	    projection_values_variables_to_use.extend([20000,20000])
+	    minimum_variables.extend([0,0])
+	    minimum_variables.extend([60000,60000])
+	    
 	kde_sig = gaussian_kde([df_sig[var] for var in variables_to_use], bw_method=0.01)
 	kde_bkg = gaussian_kde([df_bkg[var] for var in variables_to_use], bw_method=0.01)
 	
@@ -115,16 +125,19 @@ def main():
 	type_bkg = np.array(1. for i in range (0, len(df_bkg_histo["rp3"])))
 	df_bkg_histo["truth"] = type_bkg
 	
+	
 	df_sig_histo = pd.DataFrame()						# defining the 5D or 7D sig dataframe for the re-sampled variables
 	df_sig_histo["rp3"] = df_sig["rp3"] #resampled_points_sig[0]
 	df_sig_histo["rd3"] = df_sig["rd3"] #resampled_points_sig[1]
 	df_sig_histo["ep"] = df_sig["ep"] #resampled_points_sig[2]
 	df_sig_histo["ed"] = df_sig["ed"] #resampled_points_sig[3]
 	df_sig_histo["deltar"] = df_sig["deltar"] #resampled_points_sig[4]
+	df_sig_histo = df_sig_histo.head(len(df_bkg_histo))
+	
 	if(variables==7):
 		df_sig_histo["QLpFlat"] = df_sig["QLpFlat"]
 		df_sig_histo["QLdFlat"] = df_sig["QLdFlat"]
-	
+
 	#### Plotting Correlation Matrices of resampled signal and background datasets
 	from plots import correlation_matrix_sig_bkg
 	correlation_matrix_sig_bkg(df_sig_histo,df_bkg_histo,path) 	
@@ -134,11 +147,11 @@ def main():
 	df_sig_histo["truth"] = type_sig
 	df_sig_histo = df_sig_histo.head(len(df_bkg_histo))
 	
-	train_sig, test_sig = train_test_split(df_sig_histo, test_size = 0.3)
-	test_sig, validation_sig = train_test_split(test_sig, test_size = 0.5)
+	train_sig, test_sig = train_test_split(df_sig_histo, test_size = 0.3, random_state=30)
+	test_sig, validation_sig = train_test_split(test_sig, test_size = 0.5, random_state=30)
 	
-	train_bkg, test_bkg = train_test_split(df_bkg_histo, test_size = 0.3)
-	test_bkg, validation_bkg = train_test_split(test_bkg, test_size = 0.5)
+	train_bkg, test_bkg = train_test_split(df_bkg_histo, test_size = 0.3, random_state=30)
+	test_bkg, validation_bkg = train_test_split(test_bkg, test_size = 0.5, random_state=30)
 	
 	train = pd.concat([train_sig, train_bkg], axis = 0) #ignore_index = True)
 	test = pd.concat([test_sig, test_bkg], axis = 0) #ignore_index = True)
@@ -156,59 +169,22 @@ def main():
 	label_train = keras.utils.to_categorical(label_train, 2) #2 is the number of the classes
 	label_test = keras.utils.to_categorical(label_test_1, 2)
 	label_validation = keras.utils.to_categorical(label_validation_1, 2)
-	
-	np.random.seed(20)
-	
-	score = []
-	score_test = []
-	hist_acc = []
-	hist_val_acc = []
-	hist_loss = []
-	hist_val_loss = []
-	label = []
-	
+		
 	#### Training of neural network
 
-	print("-- TRAINING has started")
+	from TrainingManager import TrainingManager_NN
+	manager = TrainingManager_NN(variables, training, epochs, name)
+	manager.train_model(train, label_train, validation, label_validation, test, label_test)	
 	
-	for i in range (0, training): # Train the same network for 10 times and then get average accuracy and loss
-	  np.random.seed(20)
-	  keras.utils.set_random_seed(i) # Making sure that the network result is reproducible (refers to the shuffling of data before each epoch). With "i" we control the impact of randomness
-	
-	  print("Running training number {}/{}".format(i, training))
-	
-	  model = tf.keras.Sequential()
-	  if(variables == 5):
-	  	  model.add(Dense(50, input_shape=(5,), activation='relu')) 	#input layer and first hidden layer
-	  if(variables == 7):
-	  	  model.add(Dense(50, input_shape=(7,), activation='relu')) 	#input layer and first hidden layer
-	  model.add(Dense(50, activation='relu')) 				#second hidden layer
-	  model.add(Dense(30, activation='relu')) 				#third hidden layer
-	  model.add(Dense(20, activation='relu')) 				#fourth hidden layer
-	  model.add(Dense(2, activation='softmax')) 				#soft max layer, used for classification (2 classes: signal and background)
-	
-	  # compile the model choosing optimizer, loss and metrics objects
-	  model.compile(loss = keras.losses.categorical_crossentropy, optimizer = Adam(use_ema = True), metrics = ["categorical_accuracy"]) #use_ema = True
-	
-	  reduce_lr = ReduceLROnPlateau(monitor = 'val_loss', factor = 0.9, patience = 5, min_lr = 0.00005)
-	  callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=10, verbose=1, restore_best_weights=True)
-	
-	  history = model.fit(train, label_train, callbacks = [reduce_lr], #, callback],
-	            batch_size = batch_size,
-	            epochs = epochs,
-	            shuffle = True, # a good idea is to shuffle input before at each epoch
-	            verbose = 0,
-	            validation_data = (validation, label_validation))
-	  score.append(model.evaluate(validation, label_validation, verbose = 0))
-	  score_test.append(model.evaluate(test, label_test, verbose = 0))
-	  hist_acc.append(history.history['categorical_accuracy'])
-	  hist_val_acc.append(history.history['val_categorical_accuracy'])
-	  hist_loss.append(history.history['loss'])
-	  hist_val_loss.append(history.history['val_loss'])
-	  model.save_weights(name + "/model_" + name + ".h." +str(i)) #salvo i pesi del modello dopo l'allenamento
+	label = manager.label	
+	score = manager.score
+	score_test = manager.score_test
+	hist_acc = manager.hist_acc
+	hist_val_acc = manager.hist_val_acc
+	hist_loss = manager.hist_loss
+	hist_val_loss = manager.hist_val_loss
+	model = manager.model
 
-	  label.append(model.predict(test))
-	
 	mean_acc = np.mean(hist_acc[:training], axis=0)
 	mean_val_acc = np.mean(hist_val_acc[:training], axis=0)
 	mean_loss = np.mean(hist_loss[:training], axis=0)
@@ -225,10 +201,10 @@ def main():
 	print('Mean test accuracy:', float(sum(score_test_T[1]))/training,'\n')
 		
 	# Plot history for loss and accuracy
+
 	from plots import plot_mean_model_history
 	plot_mean_model_history(mean_acc, mean_val_acc, mean_loss, mean_val_loss, path)
-	
-	
+		
 	label_test_1 = 1. - label_test_1  # Now: 1 is signal, 0 is background
 
 	predict = np.zeros((len(label[0]), training))  # label_pred_keras))
@@ -239,7 +215,6 @@ def main():
 	label_test_1 = label_test_1.astype(int)
 	
 	fpr_list, tpr_list, thresholds_list, meta_list, auc_list = [], [], [], [], []
-	x_t = []
 	
 	for i in range (0, training):
 	  fpr_keras, tpr_keras, thresholds_keras = roc_curve(label_test_1, predict.T[i], pos_label = 1) #fpr = false positive rate. tpr = true positive rate
@@ -251,11 +226,7 @@ def main():
 	  auc_keras = auc(fpr_list[i], tpr_list[i])
 	  auc_list.append(auc_keras)
 	
-	for i in range (0, len(thresholds_keras)):
-	  x_t.append(i)
 	
-	eff_meta = []
-	pur_meta = []
 	for i in range (0, training):
 	  eff_meta.append(tpr_list[i][meta_list[i]])
 	  pur_meta.append(1. - fpr_list[i][meta_list[i]])
@@ -299,8 +270,9 @@ def main():
 		writefile.write("Average AUC: {:.4f} +- {:.4f}".format(mean_auc, dev_auc))
 	
 	#### Plot ROC curve - it illustrates the diagnostic ability of a binary classifier system as its discrimination threshold is varied. The critical point here is “binary classifier” and “varying threshold”. AUC is one single number to summarize a classifier’s performance by assessing the ranking regarding separation of the two classes. The higher, the better.
+	
 	from plots import plot_roc_curve
-	plot_roc_curve(training, tpr_list, fpr_list, mean_auc, dev_auc, mean_eff, dev_eff, mean_pur, dev_pur, ar, purity, tpr_cuts, fpr_cuts)
+	plot_roc_curve(training, path, tpr_list, fpr_list, mean_auc, dev_auc, mean_eff, dev_eff, mean_pur, dev_pur, ar, purity, tpr_cuts, fpr_cuts)
 	
 	#### Histograms of the decision of NN
 
@@ -329,11 +301,28 @@ def main():
 	
 	#### Neural network decision boundaries projected on a 2-D space
 	
-	model.load_weights(name + "/model_" + name + ".h." + str(num_best_model))
-	from decision_boundaries_plotter import DecisionBoundariesPlotter
-	decision_boundaries_plotter = DecisionBoundariesPlotter(model, Ep_Threshold_Min, Ep_Threshold_Max, 0, 4, variables, path)
-	decision_boundaries_plotter.run()
+	name_x = "rp3"
+	name_y = "ep"
 	
+#	model.load_weights(name + "/model_" + name + ".h." + str(num_best_model))
+	model.load_weights(name + "/model_" + name + ".h." + str(0))
+
+	from decision_boundaries_plotter import DecisionBoundariesPlotter
+	from itertools import combinations
+	
+	for i in range (0,training):
+		blank = path
+		model.load_weights(name + "/model_" + name + ".h." + str(i))
+		path = path + str(i) + ".pdf"
+		decision_boundaries_plotter = DecisionBoundariesPlotter(model, "ep", "deltar", variables_to_use, projection_values_variables_to_use, minimum_variables, maximum_variables, variables, path)
+		decision_boundaries_plotter.run()
+		path = blank
+	
+	
+	for arg1, arg2 in combinations(variables_to_use, 2):
+		decision_boundaries_plotter = DecisionBoundariesPlotter(model, arg1, arg2, variables_to_use, projection_values_variables_to_use, minimum_variables, maximum_variables, variables, path)
+		decision_boundaries_plotter.run()
+		
 	print("##### END #####")
 	end_time = time.time()
 	duration_in_seconds = end_time - start_time
