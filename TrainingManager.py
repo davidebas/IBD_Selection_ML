@@ -81,7 +81,7 @@ class TrainingManager_NN:
 		self.mean_acc = np.mean(self.hist_acc[:self.training], axis=0)
 		self.mean_val_acc = np.mean(self.hist_val_acc[:self.training], axis=0)
 		self.mean_loss = np.mean(self.hist_loss[:self.training], axis=0)
-		mean_val_loss = np.mean(self.hist_val_loss[:self.training], axis=0)
+		self.mean_val_loss = np.mean(self.hist_val_loss[:self.training], axis=0)
 
 		score_T = np.array(self.score).T
 		score_test_T = np.array(self.score_test).T

@@ -20,38 +20,14 @@ class DecisionBoundariesPlotter:
 		found_variables = [{"name": var, "min": self.minimum_variables[i], "max": self.maximum_variables[i]} for i, var in enumerate(self.variables_to_use) if var in [self.name_x, self.name_y]]
 		not_found_variables = [var for var in self.variables_to_use if var not in [self.name_x, self.name_y]]
 
-		# Salvataggio degli indici delle variabili trovate nell'oggetto self
 		self.indices_found = indices
-
-		# Creazione dell'oggetto xy
 		xy = {"indices": indices, "variables": found_variables}
-
-		# Creazione dell'oggetto projection
 		projection = {"indices": indices, "variables": found_variables, "projection_values": [float(val) for val in self.projection_values_variables_to_use[indices[0]:indices[0]+len(indices)]]}
 
-		# Output
-		#print("xy object:")
-		#print("Indices:", xy["indices"])
-		#print("Variables:")
-		#for var in xy["variables"]:
-		#    print(f"Name: {var['name']}, Min: {var['min']}, Max: {var['max']}")
-
-		#print("\nprojection object:")
-		#print("Indices:", projection["indices"])
-		#print("Variables:")
-		#for var in projection["variables"]:
-		#    print(f"Name: {var['name']}, Min: {var['min']}, Max: {var['max']}")
-		#print("Projection Values:", projection["projection_values"])
-
-		#print("\nVariables not found:")
-		#print(not_found_variables)
-
 	def create_grid(self):
-	# Assicurati che gli indici siano stati trovati prima di procedere
 		if self.indices_found is None:
 			raise ValueError("Indices not found. Run find_variables method first.")
 
-	# Ottieni i valori minimi e massimi per gli indici trovati
 		var_x_min = float(self.minimum_variables[self.indices_found[0]])
 		var_x_max = float(self.maximum_variables[self.indices_found[0]])
 		var_y_min = float(self.minimum_variables[self.indices_found[1]])
@@ -97,20 +73,6 @@ class DecisionBoundariesPlotter:
 			else:
 				r_arrays[i] = np.full((size,1), fill_value=self.projection_values_variables_to_use[i]) 
 
-				#r_arrays[i] = np.full(len(self.indices_found), fill_value=10) 
-	
-	# Output di esempio per verificare i risultati
-	#	for i, array in enumerate(r_arrays, start=1):
-	#		print(f"r{i}: {array}")
-    
-	#r3, r5 = c_grid.flatten(), e_grid.flatten()
-	#r3, r5 = r3.reshape((len(r3), 1)), r5.reshape((len(r5), 1))
-	#r1 = np.full((len(r3), 1), 1000)
-	#r2 = np.full((len(r3), 1), 1000)
-	#r4 = np.full((len(r3), 1), 2.2)
-	#r6 = np.full((len(r3), 1), 20000)
-	#r7 = np.full((len(r3), 1), 20000)
-
 		if self.variables == 5:
 			grid = np.hstack((r_arrays[0], r_arrays[1], r_arrays[2], r_arrays[3], r_arrays[4]))
 		elif self.variables == 7:
@@ -118,23 +80,11 @@ class DecisionBoundariesPlotter:
 		else:
 			raise ValueError("Not acceptable number of variables")
 
-		print("GRIDDDD")
-		#print(grid)
-
-		#print("Type of grid:", type(grid))
-		#print("Shape of grid:", grid.shape)
 
 		return grid
 
 	def predict_and_plot(self, grid):
-		print(grid)
-
-		print("Type of grid:", type(grid))
-		print("Shape of grid:", grid.shape)
-
-		print("Input prima della predizione:", grid)
 		prediction = self.model.predict(grid)
-		print("Output della predizione:", prediction)		
 
 		prediction_clabel = prediction[:, 0].reshape((self.shape, self.shape))
 
@@ -145,9 +95,6 @@ class DecisionBoundariesPlotter:
 		var_x_max = float(self.maximum_variables[self.indices_found[0]])
 		var_y_min = float(self.minimum_variables[self.indices_found[1]])
 		var_y_max = float(self.maximum_variables[self.indices_found[1]])
-		
-		#print(var_x_min,var_x_max)
-		#print(var_y_min,var_y_max)
 		
 		plt.imshow(prediction_clabel, extent=(var_x_min, var_x_max, var_y_min, var_y_max),
 		   cmap='bwr_r', origin='lower', aspect='auto', alpha=0.5)
@@ -179,9 +126,6 @@ class DecisionBoundariesPlotter:
 		#plt.savefig(self.path + "_DecisionBoundaries_Ep_DeltaR.pdf")
 		#plt.close()
 
-	def plot_grids(self):
-		print(self.c_grid)
-		print(self.e_grid)
 
 
 	def run(self):
@@ -189,7 +133,5 @@ class DecisionBoundariesPlotter:
 		self.c_grid, self.e_grid = self.create_grid()
 		grid = self.generate_input_arrays(self.c_grid, self.e_grid)
 		self.predict_and_plot(grid)
-		#self.plot_grids()
 
-# decision_boundaries_plotter = DecisionBoundariesPlotter(model, var_x_min, var_x_max, variables, var_y_max, path)
-# decision_boundaries_plotter.run()
+

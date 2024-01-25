@@ -40,6 +40,7 @@ def main():
 		PowerLawCoefficient_p = impostazioni.get('PowerLawCoefficient_p',0.4977)
 		PowerLawCoefficient_d = impostazioni.get('PowerLawCoefficient_d',0.4929)
 		batch_size = int(impostazioni.get('batch_size', 212))
+		All2DPlots = impostazioni.get('All2DPlots', 'no')
 
 		print("-- INPUTS")
 		print(f"Name: {name}")
@@ -49,7 +50,8 @@ def main():
 		print(f"Input dataset signal: {InputDataset_Sig}")
 		print(f"Input dataset background: {InputDataset_Bkg}")
 		print(f"Batch size: {batch_size} ")
-		
+		print(f"2D plots: all? : {All2DPlots} ")
+				
 		from lib import create_folder_output
 		create_folder_output(name)
 		path = name + '/' + name
@@ -61,38 +63,6 @@ def main():
 	eff_meta = []
 	pur_meta = []
 
-	df_sig = pd.read_csv(InputDataset_Sig, delimiter='	')
-	df_sig["rp3"] = df_sig["rp"]**3.
-	df_sig["rd3"] = df_sig["rd"]**3.
-	df_sig = df_sig.dropna()
-	
-	df_bkg = pd.read_csv(InputDataset_Bkg, delimiter='	')
-	df_bkg["rp3"] = df_bkg["rp"]**3.
-	df_bkg["rd3"] = df_bkg["rd"]**3.
-	df_bkg = df_bkg.dropna()
-	
-	type_bkg = np.array(1 for i in range (0, len(df_bkg["rp3"]))) #type 1 is background
-	df_bkg["type"] = type_bkg
-	
-	df_bkg = df_bkg.loc[(df_bkg["rp3"] < R_Threshold_Max**3.) & (df_bkg["rd3"] <= R_Threshold_Max**3.)] # FV cut
-	
-	type_sig = np.array(0. for i in range (0, len(df_sig["rp3"]))) #type 0 is signal
-	df_sig["type"] = type_sig
-	
-	if(variables == 7 ):
-		df_sig["QLpFlat"] = df_sig["QLp"]/df_sig["ep"]**PowerLawCoefficient_p
-		df_bkg["QLpFlat"] = df_bkg["QLp"]/df_bkg["ep"]**PowerLawCoefficient_p
-		df_sig["QLdFlat"] = df_sig["QLd"]/df_sig["ed"]**PowerLawCoefficient_d
-		df_bkg["QLdFlat"] = df_bkg["QLd"]/df_bkg["ed"]**PowerLawCoefficient_d
-	
-	#### Resampling of distributions with gaussian KDEs
-
-	np.random.seed(10)
-	
-	print("NUMBER OF EVENTS FOR EACH DATASET DF_SIG AND DF_BKG")
-	print(len(df_sig))
-	print(len(df_bkg))
-
 	variables_to_use = ["rp3", "rd3", "ep", "ed", "deltar"]
 	projection_values_variables_to_use = [1000, 1000, 5, 2.2, 1.5]
 	minimum_variables = [0, 0, Ep_Threshold_Min, Ed_Threshold_Min_1, 0]
@@ -102,77 +72,27 @@ def main():
 	    variables_to_use.extend(["QLpFlat", "QLdFlat"])
 	    projection_values_variables_to_use.extend([20000,20000])
 	    minimum_variables.extend([0,0])
-	    minimum_variables.extend([60000,60000])
-	    
-	kde_sig = gaussian_kde([df_sig[var] for var in variables_to_use], bw_method=0.01)
-	kde_bkg = gaussian_kde([df_bkg[var] for var in variables_to_use], bw_method=0.01)
-	
-	resampled_points_bkg = kde_bkg.resample(len(df_sig)) #96527)
-	
-	df_bkg_histo = pd.DataFrame()						# defining the 5D or 7D bkg dataframe for the re-sampled variables 
-	df_bkg_histo["rp3"] = resampled_points_bkg[0]
-	df_bkg_histo["rd3"] = resampled_points_bkg[1]
-	df_bkg_histo["ep"] = resampled_points_bkg[2]
-	df_bkg_histo["ed"] = resampled_points_bkg[3]
-	df_bkg_histo["deltar"] = resampled_points_bkg[4]
-	
-	if variables == 7 :
-		df_bkg_histo["QLpFlat"] = resampled_points_bkg[5]
-		df_bkg_histo["QLdFlat"] = resampled_points_bkg[6]
-	
-	df_bkg_histo = df_bkg_histo.loc[(df_bkg_histo["rp3"] > 0.) & (df_bkg_histo["rd3"] > 0.)]	# discard possible non-physical events with r<0, which could be created by the re-sampling
-	type_bkg = np.array(1. for i in range (0, len(df_bkg_histo["rp3"])))
-	df_bkg_histo["truth"] = type_bkg
-	
-	
-	df_sig_histo = pd.DataFrame()						# defining the 5D or 7D sig dataframe for the re-sampled variables
-	df_sig_histo["rp3"] = df_sig["rp3"] #resampled_points_sig[0]
-	df_sig_histo["rd3"] = df_sig["rd3"] #resampled_points_sig[1]
-	df_sig_histo["ep"] = df_sig["ep"] #resampled_points_sig[2]
-	df_sig_histo["ed"] = df_sig["ed"] #resampled_points_sig[3]
-	df_sig_histo["deltar"] = df_sig["deltar"] #resampled_points_sig[4]
-	df_sig_histo = df_sig_histo.head(len(df_bkg_histo))
-	
-	if(variables==7):
-		df_sig_histo["QLpFlat"] = df_sig["QLpFlat"]
-		df_sig_histo["QLdFlat"] = df_sig["QLdFlat"]
+	    minimum_variables.extend([60000,60000])	
 
-	#### Plotting Correlation Matrices of resampled signal and background datasets
-	from plots import correlation_matrix_sig_bkg
-	correlation_matrix_sig_bkg(df_sig_histo,df_bkg_histo,path) 	
+	prompt_cut = [R_Threshold_Max, Ep_Threshold_Min, Ep_Threshold_Max, DeltaR_Max]
+	delayed_cut = [R_Threshold_Max, Ed_Threshold_Min_1, Ed_Threshold_Max_1, Ed_Threshold_Min_2, Ed_Threshold_Max_2]
 
-	#### Definition of train, test and validation datasets, and of the architecture of the neural network.
-	type_sig = np.array(0. for i in range (0, len(df_sig_histo["rp3"])))
-	df_sig_histo["truth"] = type_sig
-	df_sig_histo = df_sig_histo.head(len(df_bkg_histo))
 	
-	train_sig, test_sig = train_test_split(df_sig_histo, test_size = 0.3, random_state=30)
-	test_sig, validation_sig = train_test_split(test_sig, test_size = 0.5, random_state=30)
+	# Preprocessing of data
 	
-	train_bkg, test_bkg = train_test_split(df_bkg_histo, test_size = 0.3, random_state=30)
-	test_bkg, validation_bkg = train_test_split(test_bkg, test_size = 0.5, random_state=30)
-	
-	train = pd.concat([train_sig, train_bkg], axis = 0) #ignore_index = True)
-	test = pd.concat([test_sig, test_bkg], axis = 0) #ignore_index = True)
-	validation = pd.concat([validation_sig, validation_bkg], axis = 0)
-	
-	label_train = train["truth"].to_numpy()
-	label_test_1 = test["truth"].to_numpy()
-	label_validation_1 = validation["truth"].to_numpy()
-	
-	train = train.drop(labels = "truth", axis = 1)
-	test = test.drop(labels = "truth", axis = 1)
-	validation = validation.drop(labels = "truth", axis = 1)
-	
-	# convert class vectors to binary class matrices, e.g. for use with categorical_crossentropy
-	label_train = keras.utils.to_categorical(label_train, 2) #2 is the number of the classes
-	label_test = keras.utils.to_categorical(label_test_1, 2)
-	label_validation = keras.utils.to_categorical(label_validation_1, 2)
-		
+	from DataProcessor import DataPreprocessor
+	from DataProcessor import NeuralNetworkManager
+
+	data_preprocessor = DataPreprocessor(InputDataset_Sig, InputDataset_Bkg, variables, variables_to_use)
+
+	nn_manager = NeuralNetworkManager(data_preprocessor)
+	train, test, test_sig, test_bkg, validation, label_train, label_test, label_test_1, label_validation = nn_manager.prepare_train_test_validation()
+
 	#### Training of neural network
 
 	from TrainingManager import TrainingManager_NN
 	manager = TrainingManager_NN(variables, training, epochs, name)
+
 	manager.train_model(train, label_train, validation, label_validation, test, label_test)	
 	
 	label = manager.label	
@@ -287,29 +207,25 @@ def main():
 	from plots import plots_variables_1D_distributions
 	plots_variables_1D_distributions(histo_data,variables,path)
 	
-	#### Neural network decision boundaries projected on a 2-D space
-	
-	name_x = "rp3"
-	name_y = "ep"
-	
-#	model.load_weights(name + "/model_" + name + ".h." + str(num_best_model))
-	model.load_weights(name + "/model_" + name + ".h." + str(0))
+	#### Neural network decision boundaries projected on a 2-D space	
+	model.load_weights(name + "/model_" + name + ".h." + str(num_best_model))
 
 	from decision_boundaries_plotter import DecisionBoundariesPlotter
 	from itertools import combinations
 	
-	for i in range (0,training):
-		blank = path
-		model.load_weights(name + "/model_" + name + ".h." + str(i))
-		path = path + str(i) + ".pdf"
-		decision_boundaries_plotter = DecisionBoundariesPlotter(model, "ep", "deltar", variables_to_use, projection_values_variables_to_use, minimum_variables, maximum_variables, variables, path)
-		decision_boundaries_plotter.run()
-		path = blank
-	
-	
 	for arg1, arg2 in combinations(variables_to_use, 2):
 		decision_boundaries_plotter = DecisionBoundariesPlotter(model, arg1, arg2, variables_to_use, projection_values_variables_to_use, minimum_variables, maximum_variables, variables, path)
 		decision_boundaries_plotter.run()
+
+	if(All2DPlots == "yes"):
+		for i in range (0,training):
+			blank = path
+			model.load_weights(name + "/model_" + name + ".h." + str(i))
+			path = path + str(i) + ".pdf"
+			decision_boundaries_plotter = DecisionBoundariesPlotter(model, "ep", "deltar", variables_to_use, projection_values_variables_to_use, minimum_variables, maximum_variables, variables, path)
+			decision_boundaries_plotter.run()
+			path = blank
+
 		
 	print("##### END #####")
 	end_time = time.time()
