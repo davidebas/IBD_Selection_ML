@@ -4,6 +4,58 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 from tensorflow.keras.models import Sequential
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+class TrainingManager_BDT:
+	def __init__(self, variables, training, epochs, name):
+		np.random.seed(10)
+		tf.random.set_seed(20)
+		self.variables = variables
+		self.training = training
+		self.epochs = epochs
+		self.name = name
+		self.score = []
+		self.score_test = []
+		self.hist_acc = []
+		self.hist_val_acc = []
+		self.hist_loss = []
+		self.hist_val_loss = []
+		self.label = []
+		self.n_estimators = 28
+		self.model = None
+		self.mean_acc = None
+		self.mean_val_acc = None
+		self.mean_val_loss = None
+		self.mean_val_accuracy = None
+		self.mean_test_loss = None
+		self.mean_test_accuracy = None
+		self.bdt_err_matrix = None
+		self.bdt_train_err_matrix = None
+
+	def build_model_BDT(self):
+		model = AdaBoostClassifier(DecisionTreeClassifier(max_depth = 2), algorithm = "SAMME", n_estimators = self.n_estimators, learning_rate = 1.)
+		return model
+		
+	def train_model_BDT(self, train, label_train, validation, label_validation, test, label_test):
+		self.model = self.build_model_BDT()
+		
+		self.model.fit(train, label_train[:,1].astype(int))
+		self.compute_average_statistics_BDT(train, label_train, validation, label_validation, test, label_test)
+		print('Mean error rate val:', self.bdt_err_matrix[-1])
+		print('Mean error rate train:', self.bdt_train_err_matrix[-1])
+
+	def compute_average_statistics_BDT(self, train, label_train, validation, label_validation, test, label_test):
+		from sklearn.metrics import zero_one_loss #è la frazione di eventi mis-classificati
+
+		self.bdt_err_matrix = np.zeros((self.n_estimators,))
+		for i, y_pred in enumerate(self.model.staged_predict(validation)):
+			self.bdt_err_matrix[i] = zero_one_loss(y_pred = y_pred, y_true = label_validation[:, 1].astype(int))
+
+		self.bdt_train_err_matrix = np.zeros((self.n_estimators,))
+		for i, y_pred in enumerate(self.model.staged_predict(train)):
+			self.bdt_train_err_matrix[i] = zero_one_loss(y_pred = y_pred, y_true = label_train[:, 1].astype(int))
+
 
 class TrainingManager_NN:
 	def __init__(self, variables, training, epochs, name):

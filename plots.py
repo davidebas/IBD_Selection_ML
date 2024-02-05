@@ -23,6 +23,33 @@ def plot_mean_model_history(mean_acc, mean_val_acc, mean_loss, mean_val_loss, pa
     plt.savefig(path + "_MeanModelLoss_History.pdf")
     plt.close()
 
+def plot_mean_model_history_bdt(bdt_err_matrix, bdt_train_err_matrix, path, n_estimators):
+    import pandas as pd
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import numpy as np
+    plt.figure(figsize=(8, 6))
+
+    plt.plot(
+    	np.arange(n_estimators) + 1,
+    	bdt_train_err_matrix,
+    	label = "Train BDT2"
+	)
+
+    plt.plot(
+    	np.arange(n_estimators) + 1,
+    	bdt_err_matrix,
+    	label = "Validation BDT2"
+    )
+
+    plt.xlabel("Iterations")
+    plt.ylabel("Error rate")
+
+    plt.legend(loc="upper right")
+    plt.savefig(path + "_BDT_history.pdf")
+    plt.close()
+   
+
 def plot_roc_curve(training, path, tpr_list, fpr_list, mean_auc, dev_auc, mean_eff, dev_eff, mean_pur, dev_pur, ar, purity, tpr_cuts, fpr_cuts):
     import pandas as pd
     import seaborn as sns
@@ -30,7 +57,7 @@ def plot_roc_curve(training, path, tpr_list, fpr_list, mean_auc, dev_auc, mean_e
     fig, ax = plt.subplots()
 
     for i in range(0, training):
-        if i != 8:
+        if i != 0:
             plt.plot(tpr_list[i], 1. - fpr_list[i], color='blue', alpha=0.4)
         else:
             plt.plot(tpr_list[i], 1. - fpr_list[i], color='blue', alpha=0.4,
@@ -52,7 +79,27 @@ def plot_roc_curve(training, path, tpr_list, fpr_list, mean_auc, dev_auc, mean_e
     plt.ylabel('Signal purity (= 1 - false positive rate)')
     plt.title('ROC curve')
     plt.legend(loc='best')
-    plt.savefig("ROC_Curve.pdf")
+    plt.savefig(path + "ROC_Curve.pdf")
+    plt.grid()
+    plt.show()
+
+def plot_roc_curve_bdt(path, tpr_keras, fpr_keras, eff, pur, tpr_cuts, fpr_cuts, auc_keras):
+    import pandas as pd
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+
+    plt.plot(tpr_keras, 1. - fpr_keras, label='AUC = {:.5f}'.format(auc_keras))
+    plt.scatter(eff, pur, color = 'red', marker = 'o', label = 'Eff and pur at threshold 0.5')
+    plt.text(eff, pur, '({:.3f}, {:.3f})'.format(eff, pur), ha='left')
+    plt.legend()
+
+    plt.scatter(tpr_cuts, 1. - fpr_cuts, color='black', marker='o', label='Canonical IBD cuts')
+    plt.text(tpr_cuts, 1. - fpr_cuts, '({:.3f}, {:.3f})'.format(tpr_cuts, 1. - fpr_cuts), ha='left')
+
+    plt.xlabel('Selection efficiency (= true positive rate)')
+    plt.ylabel('Signal purity (= 1 - false positive rate)')
+    plt.savefig(path + "ROC_Curve_bdt.pdf")
     plt.grid()
     plt.show()
 

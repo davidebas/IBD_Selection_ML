@@ -101,12 +101,21 @@ class NeuralNetworkManager:
 		type_sig = np.array(0. for i in range (0, len(self.data_preprocessor.df_sig_histo["rp3"])))
 		self.data_preprocessor.df_sig_histo["truth"] = type_sig
 		self.data_preprocessor.df_sig_histo = self.data_preprocessor.df_sig_histo.head(len(self.data_preprocessor.df_bkg_histo))
+		
+		# NN
+		#train_sig, test_sig = train_test_split(self.data_preprocessor.df_sig_histo, test_size = 0.3, random_state=30)
+		#test_sig, validation_sig = train_test_split(test_sig, test_size = 0.5, random_state=30)
 
-		train_sig, test_sig = train_test_split(self.data_preprocessor.df_sig_histo, test_size = 0.3, random_state=30)
-		test_sig, validation_sig = train_test_split(test_sig, test_size = 0.5, random_state=30)
+		#train_bkg, test_bkg = train_test_split(self.data_preprocessor.df_bkg_histo, test_size = 0.3, random_state=30)
+		#test_bkg, validation_bkg = train_test_split(test_bkg, test_size = 0.5, random_state=30)
+		
+		# BDT
+		train_sig, test_sig = train_test_split(self.data_preprocessor.df_sig_histo, test_size = 0.3, shuffle = True)
+		test_sig, validation_sig = train_test_split(test_sig, test_size = 0.5, shuffle = True)
 
-		train_bkg, test_bkg = train_test_split(self.data_preprocessor.df_bkg_histo, test_size = 0.3, random_state=30)
-		test_bkg, validation_bkg = train_test_split(test_bkg, test_size = 0.5, random_state=30)
+		train_bkg, test_bkg = train_test_split(self.data_preprocessor.df_bkg_histo, test_size = 0.3, shuffle = True)
+		test_bkg, validation_bkg = train_test_split(test_bkg, test_size = 0.5, shuffle = True)
+
 
 		train = pd.concat([train_sig, train_bkg], axis = 0) #ignore_index = True)
 		test = pd.concat([test_sig, test_bkg], axis = 0) #ignore_index = True)
